@@ -1,62 +1,127 @@
-# Load packages ----
+# Load packages 
 library(shiny)
-library(maps)
-library(mapproj)
+library(ggplot2)
+library(readxl)
+library(ggcorrplot)
 
-# Load data ----
-counties <- readRDS("data/counties.rds")
 
-# Source helper functions -----
-source("helpers.R")
+# Get the data
+setwd("C:/Users/Youness/Desktop/R project/stage/shiny/inraeshiny")
 
-# User interface ----
+
+Outputs_requirements <- read_excel("Outputs_requirements_cleaned.xlsx", col_names = TRUE )
+Feed_Available <- read_excel("Feed_Available_cleaned.xlsx", col_names = TRUE )
+
+
+Forage_ingest <-as.data.frame(by(Outputs_requirements$'Forage ingested', list(Outputs_requirements$cycle), mean)) 
+Grain_ingest <- as.data.frame(by(Outputs_requirements$'Grain ingested', list(Outputs_requirements$cycle), mean))
+Grassland_ingest <- as.data.frame( by(Outputs_requirements$'Grassland ingested', list(Outputs_requirements$cycle), mean))
+Rangeland_ingest  <- as.data.frame(by(Outputs_requirements$'Rangeland ingested', list(Outputs_requirements$cycle), mean))
+cycle <- as.data.frame(by(Outputs_requirements$'cycle', list(Outputs_requirements$cycle), mean)) 
+
+Forage_available <-as.data.frame(by(Feed_Available$'Forage_available', list(Feed_Available$cycle), mean))
+Grain_available <- as.data.frame(by(Feed_Available$'Grain_Available', list(Feed_Available$cycle), mean))
+Grassland_available <- as.data.frame( by(Feed_Available$'Grasslands_Available', list(Feed_Available$cycle), mean))
+Rangeland_available  <- as.data.frame(by(Feed_Available$'Rangelands_Available', list(Feed_Available$cycle), mean))
+
+data <- cbind(Forage_ingest, Grain_ingest, Grassland_ingest, Rangeland_ingest,
+              Forage_available, Grain_available, Grassland_available, Rangeland_available, cycle )
+
+colnames(data) <- c(
+  "Forage_ingest",
+  "Grain_ingest",
+  "Grassland_ingest",
+  "Rangeland_ingest",
+  "Forage_available",
+  "Grain_available",
+  "Grassland_available",
+  "Rangeland_available",
+  "cycle"
+)
+
+a <- c("Forage_available", "Grain_available", "Grassland_available", "Rangeland_available",
+       "Rangeland_ingest", "Grassland_ingest", "Grain_ingest", "Forage_ingest", "cycle"  )
+
+# Define UI 
+
 ui <- fluidPage(
-  titlePanel("censusVis"),
+  titlePanel("Interface et Visualisation de données de simulation : "),
   
   sidebarLayout(
+    
+    # Inputs: Select variables to plot
     sidebarPanel(
-      helpText("Create demographic maps with 
-        information from the 2010 US Census."),
+      # img( src = "www/inraeimage.png" , height = 40, width = 40),
       
-      selectInput("var", 
-                  label = "Choose a variable to display",
-                  choices = c("Percent White", "Percent Black",
-                              "Percent Hispanic", "Percent Asian"),
-                  selected = "Percent White"),
+      h4("Choix des paramètres", align = "center"),
       
-      sliderInput("range", 
-                  label = "Range of interest:",
-                  min = 0, max = 100, value = c(0, 100))
+      # Select variable for y-axis
+      p("Choisir l'axe des ordonnées"),
+      selectInput(
+        inputId = "y",
+        label = "Y-axis:",
+        choices = a,
+        selected = "Forage_available"
+      ),
+      # Select variable for x-axis
+      p("Choisir l'axe des abscisses"),
+      selectInput(
+        inputId = "x",
+        label = "X-axis:",
+        choices = a,
+        selected = "Forage_ingest"
+      ),
+      br(),
+      p("Pour Afficher la matrice de corrélation, cliquez sur la boutton"),
+      br(),
+      actionButton("go", "Correlation"),
+      
     ),
     
-    mainPanel(plotOutput("map"))
+    # Output: Show scatterplot
+    mainPanel(
+      h4("Représentation des graphes", align ="center"),
+      
+      h4("Nuage de points", style = "color:blue"),
+      plotOutput(outputId = "scatterplot"),
+      
+      h4("Matrice de corrélation", style = "color:blue"),
+      plotOutput(outputId = "correlation")
+      
+    )
   )
 )
 
-# Server logic ----
-server <- function(input, output) {
-  output$map <- renderPlot({
-    data <- switch(input$var, 
-                   "Percent White" = counties$white,
-                   "Percent Black" = counties$black,
-                   "Percent Hispanic" = counties$hispanic,
-                   "Percent Asian" = counties$asian)
-    
-    color <- switch(input$var, 
-                    "Percent White" = "darkgreen",
-                    "Percent Black" = "black",
-                    "Percent Hispanic" = "darkorange",
-                    "Percent Asian" = "darkviolet")
-    
-    legend <- switch(input$var, 
-                     "Percent White" = "% White",
-                     "Percent Black" = "% Black",
-                     "Percent Hispanic" = "% Hispanic",
-                     "Percent Asian" = "% Asian")
-    
-    percent_map(data, color, legend, input$range[1], input$range[2])
+
+
+# Define server 
+
+server <- function(input, output, session) {
+  output$scatterplot <- renderPlot({
+    ggplot(data = data, aes_string(x = input$x, y = input$y)) +
+      geom_point()
   })
+  
+  randomVals <- eventReactive(input$go, {
+    r <- cor(data)
+    round(r, 2)
+  })
+  output$correlation <- renderPlot({
+    ggcorrplot(randomVals(), lab = TRUE )
+  })
+  
 }
 
-# Run app ----
-shinyApp(ui, server)
+# Create a Shiny app object 
+
+shinyApp(ui = ui, server = server)
+
+# randomVals <- eventReactive(input$go, {
+#   runif(input$n)
+# })
+# 
+# output$plot <- renderPlot({
+#   hist(randomVals())
+# })
+
+
