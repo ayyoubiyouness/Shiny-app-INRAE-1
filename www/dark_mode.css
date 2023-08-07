@@ -1,0 +1,47 @@
+
+#scenario0 {
+  position:relative;
+  display: flex;
+  height: 100vh;
+}
+
+#scenario1 {
+  position:relative;
+  display: flex;
+  height: 100vh;
+}
+
+#scenario2 {
+  position:relative;
+  display: flex;
+  height: 100vh;
+}
+
+#scenario3 {
+  position:relative;
+  display: flex;
+  height: 100vh;
+}
+.column {
+  flex : 1;
+  overflow-y : auto;
+  padding : 10px;
+}
+
+.left-column {
+  max-width: 1000px;
+  background-color: #f0f0f0;
+}
+
+.right-column {
+  max-width: 1000px;
+  background-color: #f9f9f9;
+  position : sticky;
+  top : 10;
+  height : 100vh;
+}
+
+h1 {
+  text-align: center;
+}
+
